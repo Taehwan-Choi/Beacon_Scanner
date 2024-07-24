@@ -302,6 +302,7 @@ class MainActivity : ComponentActivity() {
             }
             bluetoothLeScanner.stopScan(scanCallback)
             isScanning = false
+
         }
     }
 
