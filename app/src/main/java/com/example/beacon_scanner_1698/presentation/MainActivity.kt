@@ -301,7 +301,6 @@ class MainActivity : ComponentActivity() {
                 handler.removeCallbacks(it)
             }
             bluetoothLeScanner.stopScan(scanCallback)
-
             isScanning = false
 
         }
