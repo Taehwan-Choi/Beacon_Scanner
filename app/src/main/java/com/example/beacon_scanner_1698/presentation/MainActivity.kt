@@ -249,7 +249,7 @@ class MainActivity : ComponentActivity() {
                     Log.d("BLE_MYLOG", deviceInfo)
 
                     saveToExternalCsv("ble_data.csv", deviceInfo)
-
+//                    데이터 위치 : /storage/emulated/0/Android/data/com.example.beacon_scanner_1698/files
 
                     scannedDevices.add(deviceInfo)
                 }
@@ -305,6 +305,8 @@ class MainActivity : ComponentActivity() {
             fileOutputStream.close()
 
             Log.d("BLE_MYLOG", "Data saved to $fileName")
+
+
 
         } catch (e: Exception) {
             e.printStackTrace()
