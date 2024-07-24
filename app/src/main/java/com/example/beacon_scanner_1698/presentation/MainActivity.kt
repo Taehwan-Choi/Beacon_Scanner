@@ -227,6 +227,16 @@ class MainActivity : ComponentActivity() {
                 val deviceName = scanRecord?.deviceName
                 val timestamp = result.timestampNanos
 
+                val deviceAddress = result.device.address
+
+                val deviceNum = when (deviceAddress) {
+                    "C7:9B:B1:1F:96:2B" -> "1"
+                    "CE:ED:15:41:12:4A" -> "2"
+                    else -> "3"
+                }
+
+
+
                 val currentTimeMillis = System.currentTimeMillis()
                 val elapsedTimeNanos = SystemClock.elapsedRealtimeNanos()
                 val currentTimestamp = currentTimeMillis + (timestamp - elapsedTimeNanos) / 1000000L
@@ -244,9 +254,12 @@ class MainActivity : ComponentActivity() {
 //                Log.d("BLE_MYLOG", "Device : $deviceName Time: $formattedDate, RSSI: $adjustedRssi")
 //                scannedDevices.add("Time: $formattedDate, RSSI: $adjustedRssi")
 
-                if (deviceName == "Plutocon Pro") {
-                    val deviceInfo = "Time: $formattedDate, RSSI: $rssi"
+                if ((deviceName == "Plutocon Pro") and (rssi >= -85)) {
+                    val deviceInfo = "Time: $formattedDate, RSSI: $rssi, Device : $deviceNum"
+
+
                     Log.d("BLE_MYLOG", deviceInfo)
+//                    디바이스 주소는 C7:9B:B1:1F:96:2B  // CE:ED:15:41:12:4A
 
                     saveToExternalCsv("ble_data.csv", deviceInfo)
 //                    데이터 위치 : /storage/emulated/0/Android/data/com.example.beacon_scanner_1698/files
@@ -304,7 +317,7 @@ class MainActivity : ComponentActivity() {
             bufferedWriter.close()
             fileOutputStream.close()
 
-            Log.d("BLE_MYLOG", "Data saved to $fileName")
+//            Log.d("BLE_MYLOG", "Data saved to $fileName")
 
 
 
