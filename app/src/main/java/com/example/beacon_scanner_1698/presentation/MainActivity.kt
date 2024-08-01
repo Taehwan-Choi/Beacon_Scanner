@@ -254,8 +254,14 @@ class MainActivity : ComponentActivity() {
 //                Log.d("BLE_MYLOG", "Device : $deviceName Time: $formattedDate, RSSI: $adjustedRssi")
 //                scannedDevices.add("Time: $formattedDate, RSSI: $adjustedRssi")
 
-                if ((deviceName == "Plutocon Pro") and (rssi >= -85)) {
-                    val deviceInfo = "Time: $formattedDate, RSSI: $rssi, Device : $deviceNum"
+
+
+
+//                if ((deviceName == "Plutocon Pro") and (rssi >= -85)) {
+//                    val deviceInfo = "Time: $formattedDate, RSSI: $rssi, Device : $deviceNum"
+
+                if (deviceName == "Plutocon Pro") {
+                    val deviceInfo = "Time: $formattedDate, RSSI: $rssi, Device : $deviceAddress"
 
 
                     Log.d("BLE_MYLOG", deviceInfo)
