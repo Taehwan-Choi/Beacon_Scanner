@@ -44,6 +44,28 @@ class MainActivity : ComponentActivity() {
     private lateinit var handler: Handler
     private var isScanning = false
 
+
+
+    private var scanStartTime: Long = 0
+
+    private var max0FTime: Long = 0
+    private var max1FTime: Long = 0
+    private var max2FTime: Long = 0
+    private var max3FTime: Long = 0
+
+    private var max0Frssi: Int = -100
+    private var max1Frssi: Int = -100
+    private var max2Frssi: Int = -100
+    private var max3Frssi: Int = -100
+
+
+
+
+
+
+
+
+
     companion object {
         private lateinit var appContext: Context
 
@@ -157,8 +179,20 @@ class MainActivity : ComponentActivity() {
             verticalArrangement = Arrangement.Center
         ) {
             Text(text = if (scanning) "Scanning..." else "Bluetooth Scanner", color = Color.White)
-            Button(onClick = { scanning = !scanning }) {
+            Button(onClick = {
+                scanning = !scanning
+
+                if (scanning) {
+                    scanStartTime = System.currentTimeMillis()
+                    val formattedDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(scanStartTime))
+                    Log.d("BLE_MYLOG", "Scan started at: $formattedDate")
+                }
+
+
+            }) {
                 Text(text = if (scanning) "Stop Scan" else "Start Scan", color = Color.White)
+
+
             }
             Column(
                 modifier = Modifier
@@ -230,9 +264,29 @@ class MainActivity : ComponentActivity() {
                 val deviceAddress = result.device.address
 
                 val deviceNum = when (deviceAddress) {
-                    "C7:9B:B1:1F:96:2B" -> "1"
-                    "CE:ED:15:41:12:4A" -> "2"
-                    else -> "3"
+//테스트용 2개
+                    "C7:9B:B1:1F:96:2B" -> "0"
+                    "CE:ED:15:41:12:4A" -> "0"
+//시점부
+                    "FC:FC:F3:80:FC:6C" -> "1"
+                    "E2:52:D8:6f:0D:E0" -> "1"
+//0F
+                    "D4:9E:2C:82:CA:C2" -> "2"
+                    "FD:59:4E:E4:90:5A" -> "2"
+//1F
+                    "E1:7C:49:A9:44:47" -> "3"
+                    "C1:57:CB:B2:4F:2C" -> "3"
+//2F
+                    "FE:0D:C5:67:D2:1A" -> "4"
+                    "C6:0A:94:3C:AD:B6" -> "4"
+//3F
+                    "CA:F3:16:9D:86:61" -> "5"
+                    "F9:03:56:63:15:85" -> "5"
+//종점부
+                    "DC:4A:14:06:36:26" -> "6"
+                    "E1:F5:79:EE:09:9D" -> "6"
+
+                    else -> "9"
                 }
 
 
@@ -243,9 +297,8 @@ class MainActivity : ComponentActivity() {
 
                 val date = Date(currentTimestamp)
                 val formattedDate =
-                    SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(date)
+                    SimpleDateFormat("HH:mm:ss.S", Locale.getDefault()).format(date)
 
-//                val adjustedRssi = rssi
 
                 val txPowerLevel = scanRecord?.txPowerLevel
 //                값을 받아서 확인해보면 txPowerLevel은 1로 나타남
@@ -255,19 +308,95 @@ class MainActivity : ComponentActivity() {
 //                scannedDevices.add("Time: $formattedDate, RSSI: $adjustedRssi")
 
 
+//-85 이하의 신호는 선별적으로 제한
+                if ((deviceName == "Plutocon Pro") and (rssi >= -85)) {
 
 
-//                if ((deviceName == "Plutocon Pro") and (rssi >= -85)) {
-//                    val deviceInfo = "Time: $formattedDate, RSSI: $rssi, Device : $deviceNum"
+                    
 
-                if (deviceName == "Plutocon Pro") {
-                    val deviceInfo = "Time: $formattedDate, RSSI: $rssi, Device : $deviceAddress"
+                    //각 위치에 도달햇을떄, 해당 구간의 가장 센 rssi 이상일 경우 통과시간을 갱신하는 방식
+
+                    if ((deviceNum == "2") and (rssi > max0Frssi)){
+                        max0Frssi = rssi
+                        max0FTime = System.currentTimeMillis()
+                    }
+
+                    if ((deviceNum == "3") and (rssi > max1Frssi)){
+                        max1Frssi = rssi
+                        max1FTime = System.currentTimeMillis()
+                    }
+
+                    if ((deviceNum == "4") and (rssi > max2Frssi)){
+                        max2Frssi = rssi
+                        max2FTime = System.currentTimeMillis()
+                    }
+
+                    if ((deviceNum == "5") and (rssi > max3Frssi)){
+                        max3Frssi = rssi
+                        max3FTime = System.currentTimeMillis()
+                    }
+
+
+
+
+//종점에 도달했을 경우, 0f,1f,2f,3f시간이 모두 존재한다면 최종적인 구간기록을 저장하는 로직
+                    if ((deviceNum == "6") and (max0FTime > 0) and (max1FTime > 0) and (max2FTime > 0) and (max3FTime > 0)){
+
+                        val f1Time = max1FTime - max0FTime
+                        val f2Time = max2FTime - max1FTime
+                        val f3Time = max3FTime - max2FTime
+
+                        val formattedDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(scanStartTime))
+
+
+                        val result = "$formattedDate, $f1Time, $f2Time, $f3Time, $max0Frssi, $max0FTime, $max1Frssi, $max1FTime, $max2Frssi, $max2FTime, $max3Frssi, $max3FTime"
+
+
+//                    최종적인 결과값 저장
+                        saveToExternalCsv("final_result.csv", result)
+
+//                    저장한 후 값을 다시 초기화하기
+                        max0FTime = 0
+                        max1FTime = 0
+                        max2FTime = 0
+                        max3FTime = 0
+
+                        max0Frssi = -100
+                        max1Frssi = -100
+                        max2Frssi = -100
+                        max3Frssi = -100
+                    }
+
+
+
+
+//                시점부에 왔을 경우, 모든 통과기록 기준을 초기화하는 작업
+//                내려오는 동안에 찍힌 시간이 초기화 되지 않으면 반복 조교시에 에러가 생기므로
+//                또한, 시점부에 있는 내내 계속 초기화할 필요는 없으므로 3f기록이 존재하는 조건 추가로 걸어줌
+                    if ((deviceNum == "1") and (max3FTime > 0) ){
+                        max0FTime = 0
+                        max1FTime = 0
+                        max2FTime = 0
+                        max3FTime = 0
+
+                        max0Frssi = -100
+                        max1Frssi = -100
+                        max2Frssi = -100
+                        max3Frssi = -100
+                    }
+
+
+
+                    val deviceInfo = "$currentTimeMillis, $formattedDate, $deviceNum, $rssi, $deviceAddress"
 
 
                     Log.d("BLE_MYLOG", deviceInfo)
 //                    디바이스 주소는 C7:9B:B1:1F:96:2B  // CE:ED:15:41:12:4A
 
-                    saveToExternalCsv("ble_data.csv", deviceInfo)
+                    val formattedDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(scanStartTime))
+
+                    saveToExternalCsv("$formattedDate.csv", deviceInfo)
+
 //                    데이터 위치 : /storage/emulated/0/Android/data/com.example.beacon_scanner_1698/files
 
                     scannedDevices.add(deviceInfo)
