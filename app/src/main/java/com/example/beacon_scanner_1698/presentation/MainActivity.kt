@@ -58,6 +58,8 @@ class MainActivity : ComponentActivity() {
     private var max2Frssi: Int = -100
     private var max3Frssi: Int = -100
 
+    var final_Result_Data = "no record"
+
 
 
 
@@ -207,6 +209,14 @@ class MainActivity : ComponentActivity() {
                     val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
                     Text(text = "Time: $currentTime, Not detected", color = Color.White)
                 }
+
+                Text(
+                    text = "$final_Result_Data",
+                    color = Color.White,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+
+
             }
         }
     }
@@ -269,7 +279,7 @@ class MainActivity : ComponentActivity() {
                     "CE:ED:15:41:12:4A" -> "0"
 //시점부
                     "FC:FC:F3:80:FC:6C" -> "1"
-                    "E2:52:D8:6f:0D:E0" -> "1"
+                    "E2:52:D8:6F:0D:E0" -> "1"
 //0F
                     "D4:9E:2C:82:CA:C2" -> "2"
                     "FD:59:4E:E4:90:5A" -> "2"
@@ -308,12 +318,9 @@ class MainActivity : ComponentActivity() {
 //                scannedDevices.add("Time: $formattedDate, RSSI: $adjustedRssi")
 
 
-//-85 이하의 신호는 선별적으로 제한
+//-90 이하의 신호는 선별적으로 제한
                 if ((deviceName == "Plutocon Pro") and (rssi >= -85)) {
-
-
                     
-
                     //각 위치에 도달햇을떄, 해당 구간의 가장 센 rssi 이상일 경우 통과시간을 갱신하는 방식
 
                     if ((deviceNum == "2") and (rssi > max0Frssi)){
@@ -338,22 +345,27 @@ class MainActivity : ComponentActivity() {
 
 
 
-
-//종점에 도달했을 경우, 0f,1f,2f,3f시간이 모두 존재한다면 최종적인 구간기록을 저장하는 로직
-                    if ((deviceNum == "6") and (max0FTime > 0) and (max1FTime > 0) and (max2FTime > 0) and (max3FTime > 0)){
-
-                        val f1Time = max1FTime - max0FTime
-                        val f2Time = max2FTime - max1FTime
-                        val f3Time = max3FTime - max2FTime
-
+//종점에 도달했을 경우, 0f,1f,2f,3f시간이 모두 존재한다면 최종적인 구간기록을 저장
+//구간기록 결산을 너무 빨리 하지 않도록 rssi 역치를 -70으로 설정(역치를 높여놓지 않으면 너무 빨리 종료해버리는 오류 생김)
+                    if ((deviceNum == "6") and (rssi>-70) and (max0FTime > 0) and (max1FTime > 0) and (max2FTime > 0) and (max3FTime > 0)){
                         val formattedDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(scanStartTime))
 
+//                        val f1Time = max1FTime - max0FTime
+//                        val f2Time = max2FTime - max1FTime
+//                        val f3Time = max3FTime - max2FTime
+//                        val result = "$formattedDate, $f1Time, $f2Time, $f3Time, $max0Frssi, $max0FTime, $max1Frssi, $max1FTime, $max2Frssi, $max2FTime, $max3Frssi, $max3FTime"
 
-                        val result = "$formattedDate, $f1Time, $f2Time, $f3Time, $max0Frssi, $max0FTime, $max1Frssi, $max1FTime, $max2Frssi, $max2FTime, $max3Frssi, $max3FTime"
+                        val f1TimeSeconds = (max1FTime - max0FTime) / 1000.0
+                        val f2TimeSeconds = (max2FTime - max1FTime) / 1000.0
+                        val f3TimeSeconds = (max3FTime - max2FTime) / 1000.0
+
+                        val finalresultdata = "$formattedDate, ${"%.1f".format(f1TimeSeconds)}, ${"%.1f".format(f2TimeSeconds)}, ${"%.1f".format(f3TimeSeconds)}"
 
 
+                        final_Result_Data = finalresultdata
 //                    최종적인 결과값 저장
-                        saveToExternalCsv("final_result.csv", result)
+                        saveToExternalCsv("final_result.csv", finalresultdata)
+
 
 //                    저장한 후 값을 다시 초기화하기
                         max0FTime = 0
@@ -373,7 +385,8 @@ class MainActivity : ComponentActivity() {
 //                시점부에 왔을 경우, 모든 통과기록 기준을 초기화하는 작업
 //                내려오는 동안에 찍힌 시간이 초기화 되지 않으면 반복 조교시에 에러가 생기므로
 //                또한, 시점부에 있는 내내 계속 초기화할 필요는 없으므로 3f기록이 존재하는 조건 추가로 걸어줌
-                    if ((deviceNum == "1") and (max3FTime > 0) ){
+//                시점부 역시 0F 구간에서도 검출되어 초기화 시켜버리는 오류 피하기 위해 역치값 높여줌
+                    if ((deviceNum == "1") and (max3FTime > 0) and (rssi>-70) ){
                         max0FTime = 0
                         max1FTime = 0
                         max2FTime = 0
@@ -388,6 +401,7 @@ class MainActivity : ComponentActivity() {
 
 
                     val deviceInfo = "$currentTimeMillis, $formattedDate, $deviceNum, $rssi, $deviceAddress"
+
 
 
                     Log.d("BLE_MYLOG", deviceInfo)
