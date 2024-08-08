@@ -7,9 +7,13 @@ import android.bluetooth.le.*
 import android.bluetooth.le.ScanCallback.SCAN_FAILED_ALREADY_STARTED
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.NetworkInfo
 import android.os.*
 import android.util.Log
 import android.view.WindowManager
+import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -23,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.beacon_scanner_1698.R
 import kotlinx.coroutines.delay
 import java.io.BufferedWriter
 import java.io.File
@@ -184,6 +189,9 @@ class MainActivity : ComponentActivity() {
             Button(onClick = {
                 scanning = !scanning
 
+                connect_confirm()
+
+
                 if (scanning) {
                     scanStartTime = System.currentTimeMillis()
                     val formattedDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(scanStartTime))
@@ -319,7 +327,7 @@ class MainActivity : ComponentActivity() {
 
 
 //-90 이하의 신호는 선별적으로 제한
-                if ((deviceName == "Plutocon Pro") and (rssi >= -85)) {
+                if ((deviceName == "Plutocon Pro") and (rssi >= -90)) {
                     
                     //각 위치에 도달햇을떄, 해당 구간의 가장 센 rssi 이상일 경우 통과시간을 갱신하는 방식
 
@@ -346,8 +354,8 @@ class MainActivity : ComponentActivity() {
 
 
 //종점에 도달했을 경우, 0f,1f,2f,3f시간이 모두 존재한다면 최종적인 구간기록을 저장
-//구간기록 결산을 너무 빨리 하지 않도록 rssi 역치를 -70으로 설정(역치를 높여놓지 않으면 너무 빨리 종료해버리는 오류 생김)
-                    if ((deviceNum == "6") and (rssi>-70) and (max0FTime > 0) and (max1FTime > 0) and (max2FTime > 0) and (max3FTime > 0)){
+//구간기록 결산을 너무 빨리 하지 않도록 rssi 역치를 -75으로 설정(역치를 높여놓지 않으면 너무 빨리 종료해버리는 오류 생김)
+                    if ((deviceNum == "6") and (rssi>-75) and (max0FTime > 0) and (max1FTime > 0) and (max2FTime > 0) and (max3FTime > 0)){
                         val formattedDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(scanStartTime))
 
 //                        val f1Time = max1FTime - max0FTime
@@ -384,9 +392,8 @@ class MainActivity : ComponentActivity() {
 
 //                시점부에 왔을 경우, 모든 통과기록 기준을 초기화하는 작업
 //                내려오는 동안에 찍힌 시간이 초기화 되지 않으면 반복 조교시에 에러가 생기므로
-//                또한, 시점부에 있는 내내 계속 초기화할 필요는 없으므로 3f기록이 존재하는 조건 추가로 걸어줌
 //                시점부 역시 0F 구간에서도 검출되어 초기화 시켜버리는 오류 피하기 위해 역치값 높여줌
-                    if ((deviceNum == "1") and (max3FTime > 0) and (rssi>-70) ){
+                    if ((deviceNum == "1") and (rssi>-75) ){
                         max0FTime = 0
                         max1FTime = 0
                         max2FTime = 0
@@ -474,6 +481,54 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    private fun connect_confirm(){
+
+
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val allNetworks = connectivityManager.allNetworks
+
+
+        val networkStatusStringBuilder = StringBuilder()
+
+        for (network in allNetworks) {
+            val networkCapabilities = connectivityManager.getNetworkCapabilities(network)
+            val networkType = when {
+                networkCapabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true -> "WiFi"
+                networkCapabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true -> "Cellular"
+                networkCapabilities?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true -> "Ethernet"
+                networkCapabilities?.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH) == true -> "Bluetooth"
+                else -> "Other"
+            }
+            val isConnected = networkCapabilities != null
+            networkStatusStringBuilder.append("Network Type: $networkType, Connected: $isConnected\n")
+        }
+
+        Log.d("BLE_MYLOG", networkStatusStringBuilder.toString())
+
+
+//        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+//        val network = connectivityManager.activeNetwork
+//        val networkCapabilities = connectivityManager.getNetworkCapabilities(network)
+//        val isConnected: Boolean
+//        val networkType: String
+//
+//        if (networkCapabilities != null) {
+//            isConnected = true
+//            networkType = when {
+//                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "WiFi"
+//                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "Cellular"
+//                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
+//                else -> "Other"
+//            }
+//        } else {
+//            isConnected = false
+//            networkType = "No active network"
+//        }
+//
+//        Log.d("NetworkInfo", "Connected: $isConnected, Network Type: $networkType")
+
     }
 
 }
